@@ -1,88 +1,78 @@
 import cv2
-import numpy as np
-import pandas as pd
 import pickle
-from ultralytics import YOLO
+import numpy as np
 
-# Load class names
-with open("coco.txt", "r") as my_file:
-    class_list = my_file.read().splitlines()
+drawing = False
+points = []
+parking_spots = []
 
-# Load YOLO model
-model = YOLO('yolov8s.pt')
 
-# Load saved parking spots from file
-with open("parking_spots.pkl", "rb") as f:
-    parking_spots = pickle.load(f)  # Each spot is a list of 4 (x, y) points
 
-# Open video
-cap = cv2.VideoCapture("easy1.mp4")
-if not cap.isOpened():
-    print("Error: Could not open video.")
+
+
+# Function to draw parking spots with ID
+def draw_spots(img, spots):
+    for spot in spots:
+        if len(spot['points']) == 4:
+            cv2.polylines(img, [np.array(spot['points'], dtype=np.int32)], isClosed=True, color=(0,255,0), thickness=2)
+            cv2.putText(img, f"ID: {spot['id']}", tuple(spot['points'][0]), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 1)
+
+# Mouse callback function to define parking spots
+def mouse_callback(event, x, y, flags, param):
+    global points, parking_spots
+
+    if event == cv2.EVENT_LBUTTONDOWN:
+        points.append((x, y))
+        if len(points) == 4:
+            parking_spots.append({
+                'id': len(parking_spots) + 1,  # Assign unique ID to each parking spot
+                'points': points.copy(),
+                'occupied': False,  # initially, spots are free
+                'start_time': None  # No car parked initially
+            })
+            points = []
+
+    elif event == cv2.EVENT_RBUTTONDOWN:
+        if points:
+            points.pop()
+
+# Load a frame (use a static image or video frame)
+frame = cv2.imread("park1.jpg")
+frame = cv2.resize(frame, (1020, 500))
+
+# Check if the image was loaded
+if frame is None:
+    print("Image not found.")
     exit()
 
-count = 0
-
-def point_in_polygon(point, polygon):
-    return cv2.pointPolygonTest(np.array(polygon, np.int32), point, False) >= 0
+cv2.namedWindow("Draw Parking Spots")
+cv2.setMouseCallback("Draw Parking Spots", mouse_callback)
 
 while True:
-    ret, frame = cap.read()
-    if not ret:
-        cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
-        continue
+    display = frame.copy()
 
-    count += 1
-    if count % 3 != 0:
-        continue
+    # Draw current spot in progress
+    for point in points:
+        cv2.circle(display, point, 5, (0, 0, 255), -1)
+    if len(points) > 1:
+        cv2.polylines(display, [np.array(points, dtype=np.int32)], isClosed=False, color=(0, 0, 255), thickness=2)
 
-    frame = cv2.resize(frame, (1020, 500))
-    results = model.predict(frame, verbose=False)
+    # Draw saved parking spots
+    draw_spots(display, parking_spots)
 
-    boxes = results[0].boxes.data
-    px = pd.DataFrame(boxes).astype("float")
+    # Display parking spot count
+    cv2.putText(display, f"Spots: {len(parking_spots)} | Press 's' to save, 'q' to quit", (10, 25),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
 
-    car_centers = []
+    cv2.imshow("Draw Parking Spots", display)
 
-    for index, row in px.iterrows():
-        x1, y1, x2, y2 = map(int, row[:4])
-        class_id = int(row[5])
-        class_name = class_list[class_id] if class_id < len(class_list) else "Unknown"
-
-        if class_name == "car":
-            cx, cy = (x1 + x2) // 2, (y1 + y2) // 2
-            car_centers.append((cx, cy))
-            cv2.rectangle(frame, (x1, y1), (x2, y2), (255, 0, 255), 2)
-            cv2.putText(frame, class_name, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 0, 255), 2)
-            cv2.circle(frame, (cx, cy), 5, (0, 255, 0), -1)
-
-    # Check parking spots (polygons)
-    free_count = 0
-    for idx, spot in enumerate(parking_spots):
-        spot_np = np.array(spot, np.int32)
-        occupied = False
-        for center in car_centers:
-            if point_in_polygon(center, spot_np):
-                occupied = True
-                break
-
-        color = (0, 0, 255) if occupied else (0, 255, 0)
-        status = "Occupied" if occupied else "Free"
-        if not occupied:
-            free_count += 1
-        cv2.polylines(frame, [spot_np], isClosed=True, color=color, thickness=2)
-        cv2.putText(frame, status, tuple(spot[0]), cv2.FONT_HERSHEY_SIMPLEX, 0.6, color, 2)
-
-    # Dashboard
-    total_spots = len(parking_spots)
-    cv2.rectangle(frame, (0, 0), (250, 60), (50, 50, 50), -1)
-    cv2.putText(frame, f"Free: {free_count}/{total_spots}", (10, 40),
-                cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
-
-    cv2.imshow('FRAME', frame)
+    # Handle key press events
     key = cv2.waitKey(1) & 0xFF
     if key == ord('q'):
         break
+    elif key == ord('s'):
+        with open("parking_spots.pkl", "wb") as f:
+            pickle.dump(parking_spots, f)
+        print(f"Saved {len(parking_spots)} spots to parking_spots.pkl")
 
-cap.release()
 cv2.destroyAllWindows()
