@@ -7,9 +7,9 @@ import mysql.connector
 
 # Connexion à MySQL
 db_conn = mysql.connector.connect(
-    host="localhost",
-    user="root",
-    password="",  # ⇦ à adapter
+    host="193.70.113.67",
+    user="remote_user",
+    password="strong_password",  # ⇦ à adapter
     database="parking_db"
 )
 db_cursor = db_conn.cursor()
