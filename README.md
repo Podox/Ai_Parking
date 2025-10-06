@@ -191,36 +191,12 @@ Le système affiche des messages de statut dans la console :
 - `✔ Real-time stats saved to CSV and MySQL.`
 - `Saved X spots to parking_spots.pkl`
 
-## 📈 Améliorations futures
-
-- [ ] Interface web pour visualisation à distance
-- [ ] Notifications en temps réel
-- [ ] Historique des statistiques
-- [ ] Détection de types de véhicules
-- [ ] Intégration avec des systèmes de paiement
 
 ## 👥 Auteurs
 
 - **Amri Badr**
 - **Nizar Akka**
 
-## 📄 Licence
 
-Ce projet est sous licence MIT. Voir le fichier LICENSE pour plus de détails.
-
-## 🤝 Contribution
-
-Les contributions sont les bienvenues ! N'hésitez pas à :
-1. Fork le projet
-2. Créer une branche pour votre fonctionnalité
-3. Commiter vos changements
-4. Pousser vers la branche
-5. Ouvrir une Pull Request
-
-## 📞 Support
-
-Pour toute question ou problème, n'hésitez pas à ouvrir une issue sur GitHub.
-
----
 
 **Note** : Ce projet est conçu pour des fins éducatives et de démonstration. Pour une utilisation en production, des améliorations de sécurité et de performance sont recommandées.
